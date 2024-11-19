@@ -1,67 +1,125 @@
-import React, { useRef } from "react";
-import styled from "styled-components";
+import React, { useState, useEffect } from "react";
+import {
+    Button,
+    FormContainer,
+    Input,
+    InputArea,
+    Label,
+} from "../styles/Styles";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { API_URL } from "../service/api";
 
-export const FormContainer = styled.form`
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
-    background-color: #fff;
-    padding: 20px;
-    box-shadow: 0px 0px 5px #ccc;
-    border-radius: 5px;
-`;
+const Form = ({ onEdit, setUsers, setOnEdit }) => {
+    const [nome, setNome] = useState("");
+    const [email, setEmail] = useState("");
+    const [fone, setFone] = useState("");
+    const [nascimento, setNascimento] = useState("");
 
-export const InputArea = styled.div`
-    display: flex;
-    flex-direction: column;
-`;
+    useEffect(() => {
+        if (onEdit) {
+            setNome(onEdit.nome);
+            setEmail(onEdit.email);
+            setFone(onEdit.fone);
+            setNascimento(onEdit.dataDeNascimento);
+        }
+    }, [onEdit]);
 
-export const Input = styled.input`
-    width: 120px;
-    padding: 0 10px;
-    border: 1px solid #bbb;
-    border-radius: 5px;
-    height: 40px;
-`;
+    const getUsers = async () => {
+        try {
+            const response = await axios.get(API_URL + "/usuarios.json");
 
-export const Label = styled.label``;
+            const usersArray = Object.keys(response.data).map((id) => ({
+                id,
+                ...response.data[id],
+            }));
 
-export const Button = styled.button`
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 5px;
-    border: none;
-    background-color: #2c73d2;
-    color: white;
-    height: 42px;
-`;
+            return usersArray;
+        } catch (error) {
+            console.error("Erro ao buscar usuários:", error);
+        }
+    };
 
-const Form = ({ onEdit }) => {
-    const ref = useRef();
+    const handleSaveUser = async (evento) => {
+        evento.preventDefault();
+
+        const usuario = {
+            nome,
+            email,
+            fone,
+            dataDeNascimento: nascimento,
+        };
+
+        try {
+            if (onEdit) {
+                await axios.put(
+                    API_URL + `/usuarios/${onEdit.id}.json`,
+                    usuario
+                );
+                toast.success("Usuário atualizado com sucesso!");
+            } else {
+                await axios.post(API_URL + "/usuarios.json", usuario);
+                toast.success("Usuário adicionado com sucesso!");
+            }
+
+            const updatedUsers = await getUsers();
+            setUsers(updatedUsers);
+
+            setNome("");
+            setEmail("");
+            setFone("");
+            setNascimento("");
+
+            setOnEdit(null);
+        } catch (error) {
+            console.error("Erro ao salvar usuário:", error);
+            toast.error("Erro ao salvar o usuário!");
+        }
+    };
+
     return (
-        <FormContainer ref={ref}>
+        <FormContainer>
             <InputArea>
                 <Label>Nome:</Label>
-                <Input name="nome" />
+                <Input
+                    name="nome"
+                    value={nome}
+                    onChange={(evento) => setNome(evento.target.value)}
+                />
             </InputArea>
 
             <InputArea>
                 <Label>E-mail:</Label>
-                <Input name="email" type="email" />
+                <Input
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={(evento) => setEmail(evento.target.value)}
+                />
             </InputArea>
 
             <InputArea>
                 <Label>Telefone:</Label>
-                <Input name="fone" />
+                <Input
+                    name="fone"
+                    value={fone}
+                    onChange={(evento) => setFone(evento.target.value)}
+                />
             </InputArea>
 
             <InputArea>
                 <Label>Data de Nascimento:</Label>
-                <Input name="data_nascimento" type="date" />
+                <Input
+                    name="data_nascimento"
+                    type="date"
+                    value={nascimento}
+                    onChange={(evento) => setNascimento(evento.target.value)}
+                />
             </InputArea>
 
-            <Button type="submit">SALVAR</Button>
+            <Button type="submit" onClick={handleSaveUser}>
+                {onEdit ? "ATUALIZAR" : "SALVAR"}
+            </Button>
         </FormContainer>
     );
 };
